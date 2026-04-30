@@ -1,0 +1,16 @@
+[Unit]
+Description=Discord Echo Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/openab/discord-echo-bot
+EnvironmentFile=/home/ubuntu/.config/discord-echo-bot.env
+ExecStart=/home/ubuntu/openab/discord-echo-bot/.venv/bin/python /home/ubuntu/openab/discord-echo-bot/bot.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

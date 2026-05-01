@@ -6,8 +6,10 @@ from glob import glob
 
 import discord
 from acp_bridge import AgentConfig, SessionPool
+from azure_agent_bridge import run_azure_agent
 
 DEFAULT_ACP_WORKDIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+AZURE_TRIGGER = "azure:"
 
 
 class Client(discord.Client):
@@ -53,23 +55,32 @@ class Client(discord.Client):
         thinking_message = await target_channel.send("...")
         sender_context = _build_sender_context(message)
         prompt_with_sender = f"<sender_context>\n{sender_context}\n</sender_context>\n\n{prompt}"
+        azure_prompt = _strip_azure_trigger(prompt)
 
         try:
-            connection = await self.pool.get_or_create(str(target_channel.id))
-            latest_content = "..."
+            if _is_azure_prompt(prompt):
+                response = await run_azure_agent(azure_prompt)
+                final_text = response or "_(no response)_"
+                chunks = _split_message(final_text)
+                await thinking_message.edit(content=chunks[0])
+                for chunk in chunks[1:]:
+                    await target_channel.send(chunk)
+            else:
+                connection = await self.pool.get_or_create(str(target_channel.id))
+                latest_content = "..."
 
-            async def on_update(content: str) -> None:
-                nonlocal latest_content
-                if content != latest_content:
-                    latest_content = content
-                    await thinking_message.edit(content=_split_message(content)[0])
+                async def on_update(content: str) -> None:
+                    nonlocal latest_content
+                    if content != latest_content:
+                        latest_content = content
+                        await thinking_message.edit(content=_split_message(content)[0])
 
-            response = await connection.prompt(prompt_with_sender, on_update=on_update)
-            final_text = latest_content if latest_content != "..." else response or "_(no response)_"
-            chunks = _split_message(final_text)
-            await thinking_message.edit(content=chunks[0])
-            for chunk in chunks[1:]:
-                await target_channel.send(chunk)
+                response = await connection.prompt(prompt_with_sender, on_update=on_update)
+                final_text = latest_content if latest_content != "..." else response or "_(no response)_"
+                chunks = _split_message(final_text)
+                await thinking_message.edit(content=chunks[0])
+                for chunk in chunks[1:]:
+                    await target_channel.send(chunk)
         except Exception as exc:
             print(f"[error] discord_reply_failed error={exc!r}")
             await thinking_message.edit(content=f"⚠️ {exc}")
@@ -129,6 +140,16 @@ def _split_message(content: str, limit: int = 1900) -> list[str]:
     if remaining:
         chunks.append(remaining)
     return chunks
+
+
+def _is_azure_prompt(prompt: str) -> bool:
+    return prompt.lower().startswith(AZURE_TRIGGER)
+
+
+def _strip_azure_trigger(prompt: str) -> str:
+    if not _is_azure_prompt(prompt):
+        return prompt
+    return prompt[len(AZURE_TRIGGER):].strip()
 
 
 def _resolve_acp_command() -> str:

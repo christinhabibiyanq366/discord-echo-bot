@@ -124,7 +124,7 @@ class AcpConnection:
                     if kind == "agent_message_chunk":
                         text = update.get("content", {}).get("text", "")
                         if text:
-                            parts.append(text)
+                            parts = _append_text_chunk(parts, text)
                     elif kind == "tool_call":
                         title = update.get("title") or "tool"
                         tool_lines.append(f"🔧 `{title}`...")
@@ -271,3 +271,25 @@ def _compose_display(tool_lines: list[str], text: str) -> str:
     if text.strip():
         output.append(text.strip())
     return "\n".join(output).strip()
+
+
+def _append_text_chunk(parts: list[str], chunk: str) -> list[str]:
+    if not chunk:
+        return parts
+
+    existing = "".join(parts)
+    if not existing:
+        parts.append(chunk)
+        return parts
+
+    if existing.endswith(chunk):
+        return parts
+
+    max_overlap = min(len(existing), len(chunk))
+    for overlap in range(max_overlap, 0, -1):
+        if existing.endswith(chunk[:overlap]):
+            parts.append(chunk[overlap:])
+            return parts
+
+    parts.append(chunk)
+    return parts

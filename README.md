@@ -1,6 +1,17 @@
 # discord-echo-bot
 
-A minimal Discord bot that logs messages to console.
+A minimal Discord bot that forwards Discord messages to an ACP harness and sends the reply back.
+
+This version uses `codex-acp` by default, so the flow is:
+
+`Discord message -> bot -> codex-acp child process -> Codex reply -> Discord`
+
+Behavior:
+
+- Mention the bot in a channel to start a conversation
+- The bot creates a thread when possible
+- Follow-up messages in that thread reuse the same ACP session
+- The bot streams intermediate text into a placeholder message and posts the final reply back to Discord
 
 ## Local run
 
@@ -9,16 +20,32 @@ python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
 export DISCORD_TOKEN=your_bot_token_here
+export ACP_COMMAND=codex-acp
 python bot.py
 ```
 
 ## Environment
 
-Copy `.env.example` or provide the token directly as an environment variable:
+Copy `.env.example` or provide the token directly as an environment variable.
+
+Required:
 
 ```bash
 export DISCORD_TOKEN=your_bot_token_here
 ```
+
+Optional:
+
+```bash
+export ACP_COMMAND=codex-acp
+export ACP_WORKDIR=/home/ubuntu/openab
+```
+
+Notes:
+
+- `ACP_WORKDIR` defaults to the parent directory of this project, which is `/home/ubuntu/openab` in this workspace
+- `codex-acp` must already be installed and authenticated
+- Current Codex auth can be checked with `codex login status`
 
 ## systemd service
 

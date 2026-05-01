@@ -8,7 +8,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/openab/discord-echo-bot
 EnvironmentFile=/home/ubuntu/.config/discord-echo-bot.env
-ExecStart=/home/ubuntu/openab/discord-echo-bot/.venv/bin/python /home/ubuntu/openab/discord-echo-bot/bot.py
+ExecStart=/home/ubuntu/openab/discord-echo-bot/.venv/bin/python -u /home/ubuntu/openab/discord-echo-bot/bot.py
 Restart=always
 RestartSec=5
 
